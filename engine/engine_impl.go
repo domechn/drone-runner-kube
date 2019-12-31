@@ -8,33 +8,29 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"time"
+	"net/http"
+
+	"k8s.io/client-go/util/exec"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 	watchtools "k8s.io/client-go/tools/watch"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/hashicorp/go-multierror"
 )
 
-var backoff = wait.Backoff{
-	Steps:    5,
-	Duration: 500 * time.Millisecond,
-	Factor:   1.0,
-	Jitter:   0.1,
-}
-
 // Kubernetes implements a Kubernetes pipeline engine.
 type Kubernetes struct {
 	client *kubernetes.Clientset
+	config *rest.Config
 }
 
 // NewFromConfig returns a new out-of-cluster engine.
@@ -52,6 +48,7 @@ func NewFromConfig(path string) (*Kubernetes, error) {
 	}
 	return &Kubernetes{
 		client: clientset,
+		config: config,
 	}, nil
 }
 
@@ -69,6 +66,7 @@ func NewInCluster() (*Kubernetes, error) {
 	}
 	return &Kubernetes{
 		client: clientset,
+		config: config,
 	}, nil
 }
 
@@ -110,7 +108,9 @@ func (k *Kubernetes) Destroy(ctx context.Context, spec *Spec) error {
 		result = multierror.Append(result, err)
 	}
 
-	err = k.client.CoreV1().Pods(spec.PodSpec.Namespace).Delete(spec.PodSpec.Name, &metav1.DeleteOptions{})
+	err = k.client.CoreV1().Pods(spec.PodSpec.Namespace).Delete(spec.PodSpec.Name, &metav1.DeleteOptions{
+		GracePeriodSeconds: int64ptr(0),
+	})
 	if err != nil {
 		result = multierror.Append(result, err)
 	}
@@ -120,22 +120,12 @@ func (k *Kubernetes) Destroy(ctx context.Context, spec *Spec) error {
 
 // Run runs the pipeline step.
 func (k *Kubernetes) Run(ctx context.Context, spec *Spec, step *Step, output io.Writer) (*State, error) {
-	err := k.start(spec, step)
+	err := k.waitForReady(ctx, spec, step)
 	if err != nil {
 		return nil, err
 	}
 
-	err = k.waitForReady(ctx, spec, step)
-	if err != nil {
-		return nil, err
-	}
-
-	err = k.tail(ctx, spec, step, output)
-	if err != nil {
-		return nil, err
-	}
-
-	return k.waitForTerminated(ctx, spec, step)
+	return k.start(spec, step, output)
 }
 
 func (k *Kubernetes) waitFor(ctx context.Context, spec *Spec, conditionFunc func(e watch.Event) (bool, error)) error {
@@ -176,91 +166,46 @@ func (k *Kubernetes) waitForReady(ctx context.Context, spec *Spec, step *Step) e
 			if !ok || pod.ObjectMeta.Name != spec.PodSpec.Name {
 				return false, nil
 			}
-			for _, cs := range pod.Status.ContainerStatuses {
-				if cs.Name != step.ID {
-					continue
-				}
-				if (cs.Image != step.Placeholder && cs.State.Running != nil) || (cs.State.Terminated != nil) {
-					return true, nil
-				}
+			if pod.Status.Phase == v1.PodRunning {
+				return true, nil
 			}
 		}
 		return false, nil
 	})
 }
 
-func (k *Kubernetes) waitForTerminated(ctx context.Context, spec *Spec, step *Step) (*State, error) {
+func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, error) {
+	req := k.client.CoreV1().
+		RESTClient().Post().
+		Resource("pods").Name(spec.PodSpec.Name).
+		Namespace(spec.PodSpec.Namespace).SubResource("exec")
+	req.VersionedParams(&v1.PodExecOptions{
+		Container: step.ID,
+		Command:   []string{"sh","-c",`echo "$DRONE_SCRIPT" | sh`},
+		Stdout:    true,
+		Stderr:    true,
+	},
+		scheme.ParameterCodec,
+	)
+	executor, err := remotecommand.NewSPDYExecutor(
+		k.config, http.MethodPost, req.URL())
+	if err != nil {
+		return nil, err
+	}
 	state := &State{
 		Exited:    true,
 		OOMKilled: false,
 	}
-	err := k.waitFor(ctx, spec, func(e watch.Event) (bool, error) {
-		switch t := e.Type; t {
-		case watch.Added, watch.Modified:
-			pod, ok := e.Object.(*v1.Pod)
-			if !ok || pod.ObjectMeta.Name != spec.PodSpec.Name {
-				return false, nil
-			}
-			for _, cs := range pod.Status.ContainerStatuses {
-				if cs.Name != step.ID {
-					continue
-				}
-				if cs.State.Terminated != nil {
-					state.ExitCode = int(cs.State.Terminated.ExitCode)
-					return true, nil
-				}
-			}
-		}
-		return false, nil
+	err = executor.Stream(remotecommand.StreamOptions{
+		Stdout: output,
+		Stderr: output,
 	})
 	if err != nil {
-		return nil, err
+		e, ok := err.(exec.CodeExitError)
+		if !ok {
+			return nil, err
+		}
+		state.ExitCode = e.ExitStatus()
 	}
-
 	return state, nil
-}
-
-func (k *Kubernetes) tail(ctx context.Context, spec *Spec, step *Step, output io.Writer) error {
-	req := k.client.CoreV1().RESTClient().Get().
-		Namespace(spec.PodSpec.Namespace).
-		Name(spec.PodSpec.Name).
-		Resource("pods").
-		SubResource("log").
-		Param("follow", "true").
-		Param("container", step.ID)
-
-	readCloser, err := req.Stream()
-	if err != nil {
-		return err
-	}
-
-	defer readCloser.Close()
-	_, err = io.Copy(output, readCloser)
-	return err
-}
-
-func (k *Kubernetes) start(spec *Spec, step *Step) error {
-	err := retry.RetryOnConflict(backoff, func() error {
-		pod, err := k.client.CoreV1().Pods(spec.PodSpec.Namespace).Get(spec.PodSpec.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		for i, container := range pod.Spec.Containers {
-			if container.Name == step.ID {
-				pod.Spec.Containers[i].Image = step.Image
-				if pod.ObjectMeta.Annotations == nil {
-					pod.ObjectMeta.Annotations = map[string]string{}
-				}
-				for _, env := range statusesWhiteList {
-					pod.ObjectMeta.Annotations[env] = step.Envs[env]
-				}
-			}
-		}
-
-		_, err = k.client.CoreV1().Pods(spec.PodSpec.Namespace).Update(pod)
-		return err
-	})
-
-	return err
 }

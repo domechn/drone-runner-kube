@@ -86,7 +86,6 @@ type Config struct {
 
 	Images struct {
 		Clone       string `envconfig:"DRONE_IMAGE_CLONE"`
-		Placeholder string `envconfig:"DRONE_IMAGE_PLACEHOLDER"`
 	}
 
 	ServiceAccount struct {

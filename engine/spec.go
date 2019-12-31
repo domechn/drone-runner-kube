@@ -30,7 +30,6 @@ type (
 		IgnoreStderr bool              `json:"ignore_stdout,omitempty"`
 		Image        string            `json:"image,omitempty"`
 		Name         string            `json:"name,omitempty"`
-		Placeholder  string            `json:"placeholder,omitempty"`
 		Privileged   bool              `json:"privileged,omitempty"`
 		Resources    Resources         `json:"resources,omitempty"`
 		Pull         PullPolicy        `json:"pull,omitempty"`

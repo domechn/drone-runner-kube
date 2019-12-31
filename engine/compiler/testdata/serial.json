@@ -10,7 +10,6 @@
       "id": "random",
       "environment": {},
       "image": "drone/git:latest",
-      "placeholder": "drone/placeholder:1",
       "labels": {},
       "name": "clone",
       "run_policy": "always",
@@ -29,20 +28,19 @@
     {
       "id": "random",
       "args": [
-        "echo \"$DRONE_SCRIPT\" | /bin/sh"
+        "echo \"$DRONE_SCRIPT\" | sh"
       ],
       "depends_on": [
         "clone"
       ],
       "entrypoint": [
-        "/bin/sh",
+        "sh",
         "-c"
       ],
       "environment": {},
       "labels": {},
       "name": "build",
       "image": "docker.io/library/golang:latest",
-      "placeholder": "drone/placeholder:1",
       "volumes": [
         {
           "name": "_workspace",
@@ -58,20 +56,19 @@
     {
       "id": "random",
       "args": [
-        "echo \"$DRONE_SCRIPT\" | /bin/sh"
+        "echo \"$DRONE_SCRIPT\" | sh"
       ],
       "depends_on": [
         "build"
       ],
       "entrypoint": [
-        "/bin/sh",
+        "sh",
         "-c"
       ],
       "environment": {},
       "labels": {},
       "name": "test",
       "image": "docker.io/library/golang:latest",
-      "placeholder": "drone/placeholder:1",
       "volumes": [
         {
           "name": "_workspace",

@@ -42,7 +42,6 @@ func TestClone(t *testing.T) {
 		{
 			ID:          "random",
 			Image:       "drone/git:latest",
-			Placeholder: "drone/placeholder:1",
 			Name:        "clone",
 			Pull:        engine.PullDefault,
 			RunPolicy:   engine.RunAlways,
@@ -90,7 +89,6 @@ func TestCloneCreate(t *testing.T) {
 	want := &engine.Step{
 		Name:        "clone",
 		Image:       "drone/git:latest",
-		Placeholder: "drone/placeholder:1",
 		RunPolicy:   engine.RunAlways,
 		Envs:        map[string]string{"PLUGIN_DEPTH": "50"},
 	}

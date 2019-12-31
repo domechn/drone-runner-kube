@@ -9,17 +9,16 @@
     {
       "id": "random",
       "args": [
-        "echo \"$DRONE_SCRIPT\" | /bin/sh"
+        "echo \"$DRONE_SCRIPT\" | sh"
       ],
       "entrypoint": [
-        "/bin/sh",
+        "sh",
         "-c"
       ],
       "environment": {},
       "labels": {},
       "name": "build",
       "image": "docker.io/library/golang:latest",
-      "placeholder": "drone/placeholder:1",
       "volumes": [
         {
           "name": "_workspace",

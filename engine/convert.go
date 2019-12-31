@@ -131,7 +131,7 @@ func toContainers(spec *Spec) []v1.Container {
 	for _, s := range spec.Steps {
 		container := v1.Container{
 			Name:            s.ID,
-			Image:           s.Placeholder,
+			Image:           s.Image,
 			Command:         s.Entrypoint,
 			Args:            s.Command,
 			ImagePullPolicy: toPullPolicy(s.Pull),

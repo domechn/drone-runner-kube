@@ -106,7 +106,6 @@ func (c *daemonCommand) run(*kingpin.ParseContext) error {
 			),
 			Compiler: &compiler.Compiler{
 				Cloner:         config.Images.Clone,
-				Placeholder:    config.Images.Placeholder,
 				Environ:        config.Runner.Environ,
 				Namespace:      config.Namespace.Default,
 				Labels:         config.Labels.Default,

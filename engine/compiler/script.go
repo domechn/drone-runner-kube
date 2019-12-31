@@ -5,52 +5,54 @@
 package compiler
 
 import (
+	"os"
 	"strings"
 
 	"github.com/drone-runners/drone-runner-kube/engine"
 	"github.com/drone-runners/drone-runner-kube/engine/compiler/shell"
-	"github.com/drone-runners/drone-runner-kube/engine/compiler/shell/powershell"
 	"github.com/drone-runners/drone-runner-kube/engine/resource"
 )
 
 // helper function configures the pipeline script for the
 // target operating system.
-func setupScript(src *resource.Step, dst *engine.Step, os string) {
+func setupScript(src *resource.Step, dst *engine.Step, isService bool) {
+	if len(src.Commands) == 0 && len(src.Entrypoint) == 0 && !isService {
+		src.Commands = []string{getCommand(src.Image)}
+	}
 	if len(src.Commands) > 0 {
-		switch os {
-		case "windows":
-			setupScriptWindows(src.Commands, dst)
-		default:
-			setupScriptPosix(src.Commands, dst)
-		}
+		setupScriptPosix(src.Commands, dst)
 	}
 
 	if len(src.Entrypoint) > 0 {
 		cmds := []string{
 			strings.Join(append(src.Entrypoint, src.Command...), " "),
 		}
-		switch os {
-		case "windows":
-			setupScriptWindows(cmds, dst)
-		default:
-			setupScriptPosix(cmds, dst)
-		}
+		setupScriptPosix(cmds, dst)
 	}
-}
-
-// helper function configures the pipeline script for the
-// windows operating system.
-func setupScriptWindows(commands []string, dst *engine.Step) {
-	dst.Entrypoint = []string{"powershell", "-noprofile", "-noninteractive", "-command"}
-	dst.Command = []string{"echo $Env:DRONE_SCRIPT | iex"}
-	dst.Envs["DRONE_SCRIPT"] = powershell.Script(commands)
-	dst.Envs["SHELL"] = "powershell.exe"
 }
 
 // helper function configures the pipeline script for the
 // linux operating system.
 func setupScriptPosix(commands []string, dst *engine.Step) {
-	dst.Entrypoint = []string{"/bin/sh", "-c"}
-	dst.Command = []string{`echo "$DRONE_SCRIPT" | /bin/sh`}
+	dst.Entrypoint = []string{"sh", "-c"}
+	// dst.Command = []string{`echo "$DRONE_SCRIPT" | sh`}
+	dst.Command = []string{"sleep 7200"}
 	dst.Envs["DRONE_SCRIPT"] = shell.Script(commands)
+}
+
+func getCommand(image string) string {
+	temp := getImageName(image)
+	temp = strings.ReplaceAll(temp, "-", "_")
+	temp = strings.ToUpper(temp)
+	command := os.Getenv("STEP_" + temp)
+	if command != "" {
+		return command
+	}
+	return getImageName(image)
+}
+
+func getImageName(image string) string {
+	noTagImage := strings.Split(image, ":")[0]
+	split := strings.Split(noTagImage, "/")
+	return split[len(split)-1]
 }

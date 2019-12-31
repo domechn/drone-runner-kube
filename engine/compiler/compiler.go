@@ -134,11 +134,6 @@ type (
 		// initializes.
 		Cloner string
 
-		// Placeholder provides the default placeholder image
-		// used to sleep the pipeline container until it is ready
-		// for execution.
-		Placeholder string
-
 		// Namespace provides the default kubernetes namespace
 		// when no namespace is provided.
 		Namespace string
@@ -151,7 +146,6 @@ type (
 
 // Compile compiles the configuration file.
 func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
-	os := args.Pipeline.Platform.OS
 	arch := args.Pipeline.Platform.Arch
 
 	// create the workspace paths
@@ -334,11 +328,6 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		if c.Cloner != "" {
 			step.Image = c.Cloner
 		}
-
-		// override default placeholder image.
-		if c.Placeholder != "" {
-			step.Placeholder = c.Placeholder
-		}
 	}
 
 	var hostnames []string
@@ -349,7 +338,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		dst.Detach = true
 		dst.Envs = environ.Combine(envs, dst.Envs)
 		dst.Volumes = append(dst.Volumes, workMount, statusMount)
-		setupScript(src, dst, os)
+		setupScript(src, dst, true)
 		setupWorkdir(src, dst, workspace)
 		spec.Steps = append(spec.Steps, dst)
 
@@ -357,11 +346,6 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		// automatically skipped.
 		if !src.When.Match(match) {
 			dst.RunPolicy = engine.RunNever
-		}
-
-		// override default placeholder image.
-		if c.Placeholder != "" {
-			dst.Placeholder = c.Placeholder
 		}
 
 		if len(validation.IsDNS1123Subdomain(src.Name)) == 0 {
@@ -383,7 +367,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		dst := createStep(args.Pipeline, src)
 		dst.Envs = environ.Combine(envs, dst.Envs)
 		dst.Volumes = append(dst.Volumes, workMount, statusMount)
-		setupScript(src, dst, os)
+		setupScript(src, dst, false)
 		setupWorkdir(src, dst, workspace)
 		spec.Steps = append(spec.Steps, dst)
 
@@ -391,11 +375,6 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		// automatically skipped.
 		if !src.When.Match(match) {
 			dst.RunPolicy = engine.RunNever
-		}
-
-		// override default placeholder image.
-		if c.Placeholder != "" {
-			dst.Placeholder = c.Placeholder
 		}
 
 		// if the pipeline step has an approved image, it is
