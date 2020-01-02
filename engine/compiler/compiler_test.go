@@ -224,6 +224,7 @@ func testCompile(t *testing.T, source, golden string) *engine.Spec {
 
 	opts := cmp.Options{
 		cmpopts.IgnoreUnexported(engine.Spec{}),
+		cmpopts.IgnoreFields(engine.Spec{}, "Envs"),
 		cmpopts.IgnoreFields(engine.Step{}, "Envs", "Secrets", "Command"),
 		cmpopts.IgnoreFields(engine.PodSpec{}, "Annotations", "Labels"),
 	}

@@ -220,6 +220,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		},
 		Secrets: map[string]*engine.Secret{},
 		Volumes: []*engine.Volume{workVolume, statusVolume},
+		Envs:    map[string]string{},
 	}
 
 	// set default namespace and ensure maps are non-nil
@@ -291,6 +292,8 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		)
 	}
 
+	spec.Envs = envs
+
 	// set platform if needed
 	if arch == "arm" || arch == "arm64" {
 		spec.PodSpec.Labels["kubernetes.io/arch"] = arch
@@ -319,7 +322,6 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	if args.Pipeline.Clone.Disable == false {
 		step := createClone(args.Pipeline)
 		step.ID = random()
-		step.Envs = environ.Combine(envs, step.Envs)
 		step.WorkingDir = workspace
 		step.Volumes = append(step.Volumes, workMount, statusMount)
 		spec.Steps = append(spec.Steps, step)
@@ -336,7 +338,6 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	for _, src := range args.Pipeline.Services {
 		dst := createStep(args.Pipeline, src)
 		dst.Detach = true
-		dst.Envs = environ.Combine(envs, dst.Envs)
 		dst.Volumes = append(dst.Volumes, workMount, statusMount)
 		setupScript(src, dst, true)
 		setupWorkdir(src, dst, workspace)
@@ -365,7 +366,6 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	// create steps
 	for _, src := range args.Pipeline.Steps {
 		dst := createStep(args.Pipeline, src)
-		dst.Envs = environ.Combine(envs, dst.Envs)
 		dst.Volumes = append(dst.Volumes, workMount, statusMount)
 		setupScript(src, dst, false)
 		setupWorkdir(src, dst, workspace)
