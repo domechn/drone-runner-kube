@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/drone-runners/drone-runner-kube/nicelog"
+
 	"k8s.io/client-go/util/exec"
 
 	v1 "k8s.io/api/core/v1"
@@ -185,6 +187,9 @@ func (k *Kubernetes) waitForReady(ctx context.Context, spec *Spec, step *Step) e
 }
 
 func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, error) {
+	stdoutOutput := nicelog.New(output)
+	stderrOutput := nicelog.New(output)
+
 	req := k.client.CoreV1().
 		RESTClient().Post().
 		Resource("pods").Name(spec.PodSpec.Name).
@@ -207,9 +212,11 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 		OOMKilled: false,
 	}
 	err = executor.Stream(remotecommand.StreamOptions{
-		Stdout: output,
-		Stderr: output,
+		Stdout: stdoutOutput,
+		Stderr: stderrOutput,
 	})
+	stdoutOutput.Flush()
+	stderrOutput.Flush()
 	if err != nil {
 		e, ok := err.(exec.CodeExitError)
 		if !ok {
