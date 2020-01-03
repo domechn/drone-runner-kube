@@ -1,14 +1,9 @@
 # drone-runner-kube
 
-The `kubernetes` runner executes pipelines inside Kubernetes pods. This runner is an alternative to the docker runner and is optimize for teams running Drone on Kubernetes. This requires Drone server `1.6.0` or higher.
+This is a special runtime to execute the drone pipeline on virtual-kubelet (sure on k8s).
 
-<!--
-Documentation:<br/>
-https://kubernetes-runner.docs.drone.io
--->
+## Differences With Official Version
 
-Technical Support:<br/>
-https://discourse.drone.io
+* No Update (wont update the pod when running pipeline, so this will be little faster)
 
-Issue Tracker and Roadmap:<br/>
-https://trello.com/b/ttae5E5o/drone
+* All Images In The Step Should Have Shell
