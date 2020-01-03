@@ -86,11 +86,6 @@ func (k *Kubernetes) Setup(ctx context.Context, spec *Spec) error {
 		return err
 	}
 
-	_, err = k.client.CoreV1().ConfigMaps(spec.PodSpec.Namespace).Create(toConfigMap(spec))
-	if err != nil {
-		return err
-	}
-
 	_, err = k.client.CoreV1().Pods(spec.PodSpec.Namespace).Create(toPod(spec))
 	if err != nil {
 		return err

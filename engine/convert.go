@@ -223,17 +223,6 @@ func toSecret(spec *Spec) *v1.Secret {
 	}
 }
 
-
-func toConfigMap(spec *Spec) *v1.ConfigMap {
-	return &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: spec.PodSpec.Name,
-		},
-		Data: spec.Envs,
-	}
-}
-
-
 func toDockerConfigSecret(spec *Spec) *v1.Secret {
 	return &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
