@@ -142,7 +142,6 @@ func toContainers(spec *Spec) []v1.Container {
 			},
 			VolumeMounts: toVolumeMounts(spec, s),
 			Env:          toEnv(spec, s),
-			EnvFrom:      toEnvFrom(spec, s),
 		}
 
 		containers = append(containers, container)
@@ -188,23 +187,16 @@ func toEnv(spec *Spec, step *Step) []v1.EnvVar {
 	return envVars
 }
 
-func toEnvFrom(spec *Spec, step *Step) []v1.EnvFromSource {
+func toEnvFrom(step *Step) []v1.EnvFromSource {
 	var fromList []v1.EnvFromSource
+
 	fromList = append(fromList, v1.EnvFromSource{
-		ConfigMapRef: &v1.ConfigMapEnvSource{
+		SecretRef: &v1.SecretEnvSource{
 			LocalObjectReference: v1.LocalObjectReference{
-				Name: spec.PodSpec.Name,
+				Name: step.ID,
 			},
 		},
 	})
-
-	// fromList = append(fromList, v1.EnvFromSource{
-	// 	SecretRef: &v1.SecretEnvSource{
-	// 		LocalObjectReference: v1.LocalObjectReference{
-	// 			Name: step.ID,
-	// 		},
-	// 	},
-	// })
 	return fromList
 }
 

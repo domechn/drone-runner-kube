@@ -110,11 +110,6 @@ func (k *Kubernetes) Destroy(ctx context.Context, spec *Spec) error {
 		result = multierror.Append(result, err)
 	}
 
-	err = k.client.CoreV1().ConfigMaps(spec.PodSpec.Namespace).Delete(spec.PodSpec.Name, &metav1.DeleteOptions{})
-	if err != nil {
-		result = multierror.Append(result, err)
-	}
-
 	err = k.client.CoreV1().Pods(spec.PodSpec.Namespace).Delete(spec.PodSpec.Name, &metav1.DeleteOptions{
 		GracePeriodSeconds: int64ptr(0),
 	})
@@ -182,34 +177,20 @@ func (k *Kubernetes) waitForReady(ctx context.Context, spec *Spec, step *Step) e
 }
 
 func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, error) {
+	// log := logger.Default
+
 	stdoutOutput := nicelog.New(output)
 	stderrOutput := nicelog.New(output)
 
-	req := k.client.CoreV1().
-		RESTClient().Post().
-		Resource("pods").Name(spec.PodSpec.Name).
-		Namespace(spec.PodSpec.Namespace).SubResource("exec")
-	req.VersionedParams(&v1.PodExecOptions{
-		Container: step.ID,
-		Command:   []string{"sh", "-c", `echo "$DRONE_SCRIPT" | sh`},
-		Stdout:    true,
-		Stderr:    true,
-	},
-		scheme.ParameterCodec,
-	)
-	executor, err := remotecommand.NewSPDYExecutor(
-		k.config, http.MethodPost, req.URL())
-	if err != nil {
-		return nil, err
+	execFunc := func(cmd string) error {
+		return k.exec(spec.PodSpec.Namespace, spec.PodSpec.Name, step.ID, []string{"sh", "-c", cmd}, stdoutOutput, stderrOutput)
 	}
+
 	state := &State{
 		Exited:    true,
 		OOMKilled: false,
 	}
-	err = executor.Stream(remotecommand.StreamOptions{
-		Stdout: stdoutOutput,
-		Stderr: stderrOutput,
-	})
+	err := execFunc(`echo "$DRONE_SCRIPT" | sh`)
 	stdoutOutput.Flush()
 	stderrOutput.Flush()
 	if err != nil {
@@ -220,4 +201,29 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 		state.ExitCode = e.ExitStatus()
 	}
 	return state, nil
+}
+
+func (k *Kubernetes) exec(podNamespace, podName, container string, commands []string, stdout, stderr io.Writer) error {
+	req := k.client.CoreV1().
+		RESTClient().Post().
+		Resource("pods").Name(podName).
+		Namespace(podNamespace).SubResource("exec")
+	req.VersionedParams(&v1.PodExecOptions{
+		Container: container,
+		Command:   commands,
+		Stdout:    stdout != nil,
+		Stderr:    stderr != nil,
+	},
+		scheme.ParameterCodec,
+	)
+	executor, err := remotecommand.NewSPDYExecutor(
+		k.config, http.MethodPost, req.URL())
+	if err != nil {
+		return err
+	}
+	err = executor.Stream(remotecommand.StreamOptions{
+		Stdout: stdout,
+		Stderr: stderr,
+	})
+	return err
 }

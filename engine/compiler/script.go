@@ -15,29 +15,29 @@ import (
 
 // helper function configures the pipeline script for the
 // target operating system.
-func setupScript(src *resource.Step, dst *engine.Step, isService bool) {
+func (c *Compiler) setupScript(src *resource.Step, dst *engine.Step, isService bool) {
 	if len(src.Commands) == 0 && len(src.Entrypoint) == 0 && !isService {
 		src.Commands = []string{getCommand(src.Image)}
 	}
 	if len(src.Commands) > 0 {
-		setupScriptPosix(src.Commands, dst)
+		setupScriptPosix(c.envCommands, src.Commands, dst)
 	}
 
 	if len(src.Entrypoint) > 0 {
 		cmds := []string{
 			strings.Join(append(src.Entrypoint, src.Command...), " "),
 		}
-		setupScriptPosix(cmds, dst)
+		setupScriptPosix(c.envCommands, cmds, dst)
 	}
 }
 
 // helper function configures the pipeline script for the
 // linux operating system.
-func setupScriptPosix(commands []string, dst *engine.Step) {
+func setupScriptPosix(before func() string, commands []string, dst *engine.Step) {
 	dst.Entrypoint = []string{"sh", "-c"}
 	// dst.Command = []string{`echo "$DRONE_SCRIPT" | sh`}
 	dst.Command = []string{"sleep 7200"}
-	dst.Envs["DRONE_SCRIPT"] = shell.Script(commands)
+	dst.Envs["DRONE_SCRIPT"] = shell.Script(before, commands)
 }
 
 func getCommand(image string) string {

@@ -7,6 +7,7 @@ package compiler
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
@@ -141,6 +142,10 @@ type (
 		// ServiceAccount provides the default kubernetes Service Account
 		// when no Service Account is provided.
 		ServiceAccount string
+
+		// IgnoreAnnotations if keys in annotations isnt included in this
+		// will be exported to os environment
+		IgnoreAnnotations []string
 	}
 )
 
@@ -253,7 +258,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		args.Build.Params,
 		args.Pipeline.Environment,
 		environ.Proxy(),
-		environ.System(args.System),
+		// environ.System(args.System),
 		environ.Repo(args.Repo),
 		environ.Build(args.Build),
 		environ.Stage(args.Stage),
@@ -291,6 +296,13 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		)
 	}
 
+	for key, val := range envs {
+		// remove old environ before drone 0.8
+		if strings.HasPrefix(key, "CI_") == false && val != "" {
+			spec.PodSpec.Annotations[key] = val
+		}
+	}
+
 	// set platform if needed
 	if arch == "arm" || arch == "arm64" {
 		spec.PodSpec.Labels["kubernetes.io/arch"] = arch
@@ -319,7 +331,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	if args.Pipeline.Clone.Disable == false {
 		step := createClone(args.Pipeline)
 		step.ID = random()
-		step.Envs = environ.Combine(envs, step.Envs)
+		// step.Envs = environ.Combine(envs, step.Envs)
 		step.WorkingDir = workspace
 		step.Volumes = append(step.Volumes, workMount, statusMount)
 		spec.Steps = append(spec.Steps, step)
@@ -335,9 +347,9 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	for _, src := range args.Pipeline.Services {
 		dst := createStep(args.Pipeline, src)
 		dst.Detach = true
-		dst.Envs = environ.Combine(envs, dst.Envs)
+		dst.Envs = environ.Combine(spec.CommonEnvs, dst.Envs)
 		dst.Volumes = append(dst.Volumes, workMount, statusMount)
-		setupScript(src, dst, true)
+		c.setupScript(src, dst, true)
 		setupWorkdir(src, dst, workspace)
 		spec.Steps = append(spec.Steps, dst)
 
@@ -364,9 +376,9 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	// create steps
 	for _, src := range args.Pipeline.Steps {
 		dst := createStep(args.Pipeline, src)
-		dst.Envs = environ.Combine(envs, dst.Envs)
+		// dst.Envs = environ.Combine(envs, dst.Envs)
 		dst.Volumes = append(dst.Volumes, workMount, statusMount)
-		setupScript(src, dst, false)
+		c.setupScript(src, dst, false)
 		setupWorkdir(src, dst, workspace)
 		spec.Steps = append(spec.Steps, dst)
 
@@ -533,4 +545,23 @@ func (c *Compiler) findSecret(ctx context.Context, args Args, name string) (s st
 		return
 	}
 	return found.Data, true
+}
+
+func (c *Compiler) envCommands() string {
+	var grepList []string
+	for _, an := range c.IgnoreAnnotations {
+		grepList = append(grepList, fmt.Sprintf("grep -F -v %s", an))
+	}
+	grepStr := strings.Join(grepList, " | ")
+	if grepStr != "" {
+		grepStr += " | "
+	}
+	return fmt.Sprintf(`
+cat /run/drone/env | %s while read line; do
+	echo "export $line" >> ./.env_validate
+done
+
+. ./.env_validate
+rm -f ./.env_validate
+`, grepStr)
 }

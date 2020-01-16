@@ -13,7 +13,6 @@ import (
 	"github.com/drone-runners/drone-runner-kube/internal/encoder"
 )
 
-
 func createStep(spec *resource.Pipeline, src *resource.Step) *engine.Step {
 	dst := &engine.Step{
 		ID:           random(),
