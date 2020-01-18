@@ -556,7 +556,16 @@ func (c *Compiler) envCommands() string {
 	if grepStr != "" {
 		grepStr += " | "
 	}
+	// heartbeat
 	return fmt.Sprintf(`
+heartbeat(){
+while :; do sleep 1; echo -n ' ' >&2; done
+}
+
+heartbeat &
+
+heartid=$(echo $!)
+
 cat /run/drone/env | %s while read line; do
 	echo "export $line" >> ./.env_validate
 done

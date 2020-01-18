@@ -11,7 +11,6 @@ import (
 	"net/http"
 
 	"github.com/drone-runners/drone-runner-kube/nicelog"
-
 	"k8s.io/client-go/util/exec"
 
 	v1 "k8s.io/api/core/v1"
@@ -183,7 +182,7 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 	stderrOutput := nicelog.New(output)
 
 	execFunc := func(cmd string) error {
-		return k.exec(spec.PodSpec.Namespace, spec.PodSpec.Name, step.ID, []string{"sh", "-c", cmd}, stdoutOutput, stderrOutput)
+		return k.exec(spec.PodSpec.Namespace, spec.PodSpec.Name, step.ID, cmd, stdoutOutput, stderrOutput)
 	}
 
 	state := &State{
@@ -203,14 +202,14 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 	return state, nil
 }
 
-func (k *Kubernetes) exec(podNamespace, podName, container string, commands []string, stdout, stderr io.Writer) error {
+func (k *Kubernetes) exec(podNamespace, podName, container string, command string, stdout, stderr io.Writer) error {
 	req := k.client.CoreV1().
 		RESTClient().Post().
 		Resource("pods").Name(podName).
 		Namespace(podNamespace).SubResource("exec")
 	req.VersionedParams(&v1.PodExecOptions{
 		Container: container,
-		Command:   commands,
+		Command:   []string{"sh", "-c", command},
 		Stdout:    stdout != nil,
 		Stderr:    stderr != nil,
 	},
