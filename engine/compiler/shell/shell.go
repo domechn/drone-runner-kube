@@ -14,14 +14,12 @@ import (
 
 // Script converts a slice of individual shell commands to
 // a posix-compliant shell script.
-func Script(beforeOption func() string, commands []string,afterOption func() string) string {
+func Script(beforeOption func() string, commands []string) string {
 	buf := new(bytes.Buffer)
 	fmt.Fprintln(buf)
 	fmt.Fprintf(buf, beforeOption())
 	fmt.Fprintln(buf)
 	fmt.Fprint(buf, optionScript)
-	fmt.Fprintln(buf)
-	fmt.Fprintf(buf, afterOption())
 	fmt.Fprintln(buf)
 	for _, command := range commands {
 		escaped := fmt.Sprintf("%q", command)

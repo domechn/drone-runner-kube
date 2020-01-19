@@ -142,10 +142,6 @@ type (
 		// ServiceAccount provides the default kubernetes Service Account
 		// when no Service Account is provided.
 		ServiceAccount string
-
-		// IgnoreAnnotations if keys in annotations isnt included in this
-		// will be exported to os environment
-		IgnoreAnnotations []string
 	}
 )
 
@@ -548,29 +544,23 @@ func (c *Compiler) findSecret(ctx context.Context, args Args, name string) (s st
 }
 
 func (c *Compiler) envCommands() string {
-	var grepList []string
-	for _, an := range c.IgnoreAnnotations {
-		grepList = append(grepList, fmt.Sprintf("grep -F -v %s", an))
-	}
-	grepStr := strings.Join(grepList, " | ")
-	if grepStr != "" {
-		grepStr += " | "
-	}
 	// heartbeat
-	return fmt.Sprintf(`
-heartbeat(){
-while :; do sleep 1; echo -n ' ' >&2; done
-}
-
-heartbeat &
+	return `
+while :; do sleep 1; echo -n ' ' >&2; done &
 
 heartid=$(echo $!)
 
-cat /run/drone/env | %s while read line; do
+cleanup(){
+	kill $heartid
+}
+
+trap cleanup EXIT
+
+cat /run/drone/env | grep -v "[\.-].*=?" | while read line; do
 	echo "export $line" >> ./.env_validate
 done
 
 . ./.env_validate
 rm -f ./.env_validate
-`, grepStr)
+`
 }

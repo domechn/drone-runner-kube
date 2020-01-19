@@ -37,9 +37,7 @@ func setupScriptPosix(before func() string, commands []string, dst *engine.Step)
 	dst.Entrypoint = []string{"sh", "-c"}
 	// dst.Command = []string{`echo "$DRONE_SCRIPT" | sh`}
 	dst.Command = []string{"sleep 7200"}
-	dst.Envs["DRONE_SCRIPT"] = shell.Script(before, commands, func() string {
-		return "kill $heartid"
-	})
+	dst.Envs["DRONE_SCRIPT"] = shell.Script(before, commands)
 }
 
 func getCommand(image string) string {

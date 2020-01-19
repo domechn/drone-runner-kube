@@ -37,7 +37,7 @@ func (w *Writer) Write(b []byte) (n int, err error) {
 	}
 	w.pending = append(w.pending, b...)
 	if idx := bytes.LastIndex(w.pending, splitFlag); idx != -1 {
-		_, err = w.writer.Write(w.pending[:idx])
+		_, err = w.writer.Write(bytes.TrimSpace(w.pending[:idx]))
 		if err != nil {
 			logrus.WithField("err", err).Error("nicelog write failed")
 			return

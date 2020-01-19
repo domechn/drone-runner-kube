@@ -41,7 +41,9 @@ func TestKubernetes_exec(t *testing.T) {
 				podNamespace: "default",
 				podName:      "test-pod",
 				container:    "image-1",
-				commands:     "home/test",
+				commands: `
+echo 1
+`,
 			},
 		},
 	}

@@ -94,8 +94,6 @@ type Config struct {
 
 	Annotations struct {
 		Default map[string]string `envconfig:"DRONE_ANNOTATIONS_DEFAULT"`
-		// Ignore keys dont export to env in annotations
-		Ignore []string `envconfig:"DRONE_ANNOTATIONS_IGNORE" default:"io.drone"`
 	}
 
 	Labels struct {

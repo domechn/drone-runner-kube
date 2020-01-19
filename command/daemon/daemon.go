@@ -105,14 +105,13 @@ func (c *daemonCommand) run(*kingpin.ParseContext) error {
 				config.Limit.Trusted,
 			),
 			Compiler: &compiler.Compiler{
-				Cloner:            config.Images.Clone,
-				Environ:           config.Runner.Environ,
-				Namespace:         config.Namespace.Default,
-				Labels:            config.Labels.Default,
-				Annotations:       config.Annotations.Default,
-				IgnoreAnnotations: config.Annotations.Ignore,
-				ServiceAccount:    config.ServiceAccount.Default,
-				Privileged:        append(config.Runner.Privileged, compiler.Privileged...),
+				Cloner:         config.Images.Clone,
+				Environ:        config.Runner.Environ,
+				Namespace:      config.Namespace.Default,
+				Labels:         config.Labels.Default,
+				Annotations:    config.Annotations.Default,
+				ServiceAccount: config.ServiceAccount.Default,
+				Privileged:     append(config.Runner.Privileged, compiler.Privileged...),
 				Registry: registry.Combine(
 					registry.File(
 						config.Docker.Config,
