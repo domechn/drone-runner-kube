@@ -7,8 +7,12 @@ package engine
 import (
 	"context"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
+	"strings"
+
+	"k8s.io/client-go/util/retry"
 
 	"github.com/drone-runners/drone-runner-kube/nicelog"
 	"k8s.io/client-go/util/exec"
@@ -203,26 +207,35 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 }
 
 func (k *Kubernetes) exec(podNamespace, podName, container string, command string, stdout, stderr io.Writer) error {
-	req := k.client.CoreV1().
-		RESTClient().Post().
-		Resource("pods").Name(podName).
-		Namespace(podNamespace).SubResource("exec")
-	req.VersionedParams(&v1.PodExecOptions{
-		Container: container,
-		Command:   []string{"sh", "-c", command},
-		Stdout:    stdout != nil,
-		Stderr:    stderr != nil,
-	},
-		scheme.ParameterCodec,
-	)
-	executor, err := remotecommand.NewSPDYExecutor(
-		k.config, http.MethodPost, req.URL())
-	if err != nil {
+	return retry.OnError(retry.DefaultBackoff, func(e error) bool {
+		return strings.Contains(e.Error(), "lookup")
+	}, func() error {
+		req := k.client.CoreV1().
+			RESTClient().Post().
+			Resource("pods").Name(podName).
+			Namespace(podNamespace).SubResource("exec")
+		req.VersionedParams(&v1.PodExecOptions{
+			Container: container,
+			Command:   []string{"sh", "-c", command},
+			Stdout:    stdout != nil,
+			Stderr:    stderr != nil,
+		},
+			scheme.ParameterCodec,
+		)
+		executor, err := remotecommand.NewSPDYExecutor(
+			k.config, http.MethodPost, req.URL())
+		if err != nil {
+			logrus.WithError(err).Error("New SPDYExecutor failed")
+			return err
+		}
+		err = executor.Stream(remotecommand.StreamOptions{
+			Stdout: stdout,
+			Stderr: stderr,
+		})
+		if err != nil {
+			logrus.WithError(err).Error("get executor stream failed")
+		}
 		return err
-	}
-	err = executor.Stream(remotecommand.StreamOptions{
-		Stdout: stdout,
-		Stderr: stderr,
 	})
-	return err
+
 }

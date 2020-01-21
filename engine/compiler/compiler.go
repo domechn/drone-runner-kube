@@ -556,7 +556,7 @@ cleanup(){
 
 trap cleanup EXIT
 
-cat /run/drone/env | grep -v "[\.-].*=?" | while read line; do
+cat /run/drone/env | grep -v "[\.-].*=" | while read line; do
 	echo "export $line" >> ./.env_validate
 done
 
