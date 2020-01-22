@@ -295,6 +295,9 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	for key, val := range envs {
 		// remove old environ before drone 0.8
 		if strings.HasPrefix(key, "CI_") == false && val != "" {
+			if key == "DRONE_COMMIT_MESSAGE" {
+				val = strings.ReplaceAll(val, `"`, " ")
+			}
 			spec.PodSpec.Annotations[key] = val
 		}
 	}
