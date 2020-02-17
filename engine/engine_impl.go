@@ -6,11 +6,14 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"strings"
+	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"k8s.io/client-go/util/retry"
 
@@ -208,8 +211,10 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 
 func (k *Kubernetes) exec(podNamespace, podName, container string, command string, stdout, stderr io.Writer) error {
 	return retry.OnError(retry.DefaultBackoff, func(e error) bool {
-		return strings.Contains(e.Error(), "lookup")
+		return strings.Contains(e.Error(), "lookup") || errors.Is(e, errors.New("asd"))
 	}, func() error {
+		// rate limit
+		time.Sleep(time.Millisecond * 500)
 		req := k.client.CoreV1().
 			RESTClient().Post().
 			Resource("pods").Name(podName).

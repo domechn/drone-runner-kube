@@ -30,6 +30,8 @@ func toPod(spec *Spec) *v1.Pod {
 			Tolerations:        toTolerations(spec),
 			ImagePullSecrets:   toImagePullSecrets(spec),
 			HostAliases:        toHostAliases(spec),
+			DNSPolicy:          v1.DNSPolicy(spec.PodSpec.DNS.DNSPolicy),
+			DNSConfig:          toDNSConfig(spec),
 		},
 	}
 }
@@ -45,6 +47,30 @@ func toHostAliases(spec *Spec) []v1.HostAlias {
 		}
 	}
 	return hostAliases
+}
+
+func toDNSConfig(spec *Spec) *v1.PodDNSConfig {
+	if len(spec.PodSpec.DNS.DNSConfig) == 0 {
+		return nil
+	}
+	res := new(v1.PodDNSConfig)
+	for k, v := range spec.PodSpec.DNS.DNSConfig {
+		if k == "nameservers" {
+			res.Nameservers = v
+			continue
+		}
+		if k == "searches" {
+			res.Searches = v
+			continue
+		}
+		opt := v1.PodDNSConfigOption{}
+		opt.Name = k
+		if len(v) != 0 {
+			opt.Value = &v[0]
+		}
+		res.Options = append(res.Options, opt)
+	}
+	return res
 }
 
 func toTolerations(spec *Spec) []v1.Toleration {

@@ -57,6 +57,12 @@ type (
 		Memory int64
 	}
 
+	// DNS ...
+	DNS struct {
+		DNSPolicy string
+		DNSConfig map[string][]string
+	}
+
 	// Args provides compiler arguments.
 	Args struct {
 		// Manifest provides the parsed manifest.
@@ -142,6 +148,10 @@ type (
 		// ServiceAccount provides the default kubernetes Service Account
 		// when no Service Account is provided.
 		ServiceAccount string
+
+		// DNS provides the default kubernetes DNS
+		// when no DNS is provided.
+		DNS DNS
 	}
 )
 
@@ -236,6 +246,18 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 	// set default service account
 	if spec.PodSpec.ServiceAccountName == "" {
 		spec.PodSpec.ServiceAccountName = c.ServiceAccount
+	}
+
+	if args.Pipeline.DNS == nil {
+		spec.PodSpec.DNS = engine.DNS{
+			DNSPolicy: c.DNS.DNSPolicy,
+			DNSConfig: c.DNS.DNSConfig,
+		}
+	} else {
+		spec.PodSpec.DNS = engine.DNS{
+			DNSPolicy: args.Pipeline.DNS.DNSPolicy,
+			DNSConfig: args.Pipeline.DNS.DNSConfig,
+		}
 	}
 
 	// add tolerations

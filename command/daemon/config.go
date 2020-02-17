@@ -100,6 +100,11 @@ type Config struct {
 		Default map[string]string `envconfig:"DRONE_LABELS_DEFAULT"`
 	}
 
+	DNS struct {
+		DNSPolicy string              `envconfig:"DRONE_DNS_POLICY" default:"ClusterFirst"`
+		DNSConfig map[string][]string `envconfig:"DRONE_DNS_CONFIG"`
+	}
+
 	Namespace struct {
 		Rules     map[string][]string `envconfig:"-"`
 		RulesMap  map[string]string   `envconfig:"DRONE_NAMESPACE_RULES"`

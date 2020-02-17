@@ -142,6 +142,10 @@ func (c *daemonCommand) run(*kingpin.ParseContext) error {
 						Memory: int64(config.Resources.RequestMemory),
 					},
 				},
+				DNS: compiler.DNS{
+					DNSPolicy: config.DNS.DNSPolicy,
+					DNSConfig: config.DNS.DNSConfig,
+				},
 			},
 			Execer: runtime.NewExecer(
 				tracer,

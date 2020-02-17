@@ -136,6 +136,7 @@ type (
 		Tolerations        []Toleration      `json:"tolerations,omitempty"`
 		ServiceAccountName string            `json:"service_account_name,omitempty"`
 		HostAliases        []HostAlias       `json:"host_aliases,omitempty"`
+		DNS                DNS               `json:"dns,omitempty"`
 	}
 
 	// HostAlias ...
@@ -151,5 +152,11 @@ type (
 		Operator          string `json:"operator,omitempty"`
 		TolerationSeconds *int   `json:"toleration_seconds,omitempty"`
 		Value             string `json:"value,omitempty"`
+	}
+
+	// DNS ...
+	DNS struct {
+		DNSPolicy string              `json:"dns_policy,omitempty"`
+		DNSConfig map[string][]string `json:"dns_config,omitempty"`
 	}
 )
