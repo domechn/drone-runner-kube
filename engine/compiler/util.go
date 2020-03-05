@@ -6,7 +6,6 @@ package compiler
 
 import (
 	"strings"
-	"unicode/utf8"
 
 	"github.com/drone-runners/drone-runner-kube/engine"
 	"github.com/drone-runners/drone-runner-kube/engine/resource"
@@ -150,16 +149,4 @@ func convertPullPolicy(s string) engine.PullPolicy {
 	default:
 		return engine.PullDefault
 	}
-}
-
-// filterEmoji ...
-func filterEmoji(content string) string {
-	var res []string
-	for _, value := range content {
-		_, size := utf8.DecodeRuneInString(string(value))
-		if size <= 3 {
-			res = append(res, string(value))
-		}
-	}
-	return strings.Join(res, "")
 }

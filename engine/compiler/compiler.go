@@ -321,7 +321,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 				val = strings.ReplaceAll(val, `"`, " ")
 				val = strings.ReplaceAll(val, `|`, " ")
 			}
-			spec.PodSpec.Annotations[key] = filterEmoji(val)
+			spec.PodSpec.Annotations[key] = engine.FilterEmoji(val)
 		}
 	}
 

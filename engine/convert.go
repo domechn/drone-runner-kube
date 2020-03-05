@@ -181,8 +181,9 @@ func toEnv(spec *Spec, step *Step) []v1.EnvVar {
 
 	for k, v := range step.Envs {
 		envVars = append(envVars, v1.EnvVar{
-			Name:  k,
-			Value: v,
+			Name: k,
+			// some plugin will make commit message which contains emoji to env
+			Value: FilterEmoji(v),
 		})
 	}
 
