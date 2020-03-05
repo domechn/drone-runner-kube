@@ -10,7 +10,6 @@ import (
 	"github.com/drone-runners/drone-runner-kube/engine"
 	"github.com/drone-runners/drone-runner-kube/engine/resource"
 	"github.com/drone/runner-go/manifest"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -195,5 +194,31 @@ func Test_removeCloneDeps_CloneEnabled(t *testing.T) {
 	if diff := cmp.Diff(before, after, opts); diff != "" {
 		t.Errorf("Expect clone dependencies not removed")
 		t.Log(diff)
+	}
+}
+
+func Test_filterEmoji(t *testing.T) {
+	type args struct {
+		content string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "case1",
+			args: args{
+				content: "test🐂",
+			},
+			want: "test",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := filterEmoji(tt.args.content); got != tt.want {
+				t.Errorf("filterEmoji() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

@@ -319,8 +319,9 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		if strings.HasPrefix(key, "CI_") == false && val != "" {
 			if key == "DRONE_COMMIT_MESSAGE" {
 				val = strings.ReplaceAll(val, `"`, " ")
+				val = strings.ReplaceAll(val, `|`, " ")
 			}
-			spec.PodSpec.Annotations[key] = val
+			spec.PodSpec.Annotations[key] = filterEmoji(val)
 		}
 	}
 
