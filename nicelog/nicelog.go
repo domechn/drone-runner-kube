@@ -31,6 +31,9 @@ func New(w io.Writer) *Writer {
 
 func (w *Writer) Write(b []byte) (n int, err error) {
 	n = len(b)
+	if bytes.Contains(b, []byte("sh: sleep: not found")) {
+		return
+	}
 	// 如果一直收不到换行 就在内存超过 1KB 时刷新一次
 	if len(w.pending) >= limit {
 		w.Flush()
