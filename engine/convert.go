@@ -6,6 +6,7 @@ package engine
 
 import (
 	"strings"
+	"unicode"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -180,6 +181,12 @@ func toEnv(spec *Spec, step *Step) []v1.EnvVar {
 	var envVars []v1.EnvVar
 
 	for k, v := range step.Envs {
+		for _, r := range v {
+			if unicode.Is(unicode.Scripts["Han"], r) {
+				v = ConvertUnicode(v)
+				break
+			}
+		}
 		envVars = append(envVars, v1.EnvVar{
 			Name: k,
 			// some plugin will make commit message which contains emoji to env

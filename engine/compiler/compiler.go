@@ -318,8 +318,7 @@ func (c *Compiler) Compile(ctx context.Context, args Args) *engine.Spec {
 		// remove old environ before drone 0.8
 		if strings.HasPrefix(key, "CI_") == false && val != "" {
 			if key == "DRONE_COMMIT_MESSAGE" {
-				val = strings.ReplaceAll(val, `"`, " ")
-				val = strings.ReplaceAll(val, `|`, " ")
+				val = engine.FilterInvalidChar(val)
 			}
 			spec.PodSpec.Annotations[key] = engine.FilterEmoji(val)
 		}
