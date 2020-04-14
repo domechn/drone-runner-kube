@@ -21,7 +21,7 @@ func Test_filterEmoji(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := filterEmoji(tt.args.content); got != tt.want {
+			if got := FilterEmoji(tt.args.content); got != tt.want {
 				t.Errorf("filterEmoji() = %v, want %v", got, tt.want)
 			}
 		})

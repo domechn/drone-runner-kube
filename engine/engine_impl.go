@@ -35,6 +35,10 @@ import (
 	"github.com/hashicorp/go-multierror"
 )
 
+var (
+	errNotDataWrittern = errors.New("no data written")
+)
+
 // Kubernetes implements a Kubernetes pipeline engine.
 type Kubernetes struct {
 	client *kubernetes.Clientset
@@ -196,15 +200,31 @@ func (k *Kubernetes) start(spec *Spec, step *Step, output io.Writer) (*State, er
 		Exited:    true,
 		OOMKilled: false,
 	}
-	err := execFunc(`echo "$DRONE_SCRIPT" | sh`)
-	stdoutOutput.Flush()
-	stderrOutput.Flush()
-	if err != nil {
-		e, ok := err.(exec.CodeExitError)
-		if !ok {
-			return nil, err
+	err := retry.OnError(retry.DefaultBackoff, func(err error) bool {
+		return err == errNotDataWrittern
+	}, func() error {
+		err := execFunc(`echo "$DRONE_SCRIPT" | sh`)
+		stdoutOutput.Flush()
+		stderrOutput.Flush()
+		if err != nil {
+			e, ok := err.(exec.CodeExitError)
+			if !ok {
+				return err
+			}
+			state.ExitCode = e.ExitStatus()
 		}
-		state.ExitCode = e.ExitStatus()
+
+		hasWritten := stdoutOutput.HasWritten() || stderrOutput.HasWritten()
+
+		logrus.Infof("pod: %s, container: %s, hasWritten: %v", spec.PodSpec.Name, step.ID, hasWritten)
+		if !hasWritten {
+			return errNotDataWrittern
+		}
+		return nil
+	})
+
+	if err != nil && err != errNotDataWrittern {
+		return nil, err
 	}
 	return state, nil
 }
