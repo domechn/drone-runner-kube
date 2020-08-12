@@ -41,6 +41,7 @@ func (w *Writer) Write(b []byte) (n int, err error) {
 	if idx := bytes.LastIndex(w.pending, splitFlag); idx != -1 {
 		w.hasWritten = true
 		data := bytes.TrimSpace(bytes.ReplaceAll(w.pending[:idx], []byte("sh: sleep: not found"), []byte("")))
+		data = bytes.TrimSpace(bytes.ReplaceAll(data, []byte("sh: sleep: Permission denied"), []byte("")))
 		if len(data) != 0 {
 			_, err = w.writer.Write(data)
 			if err != nil {
