@@ -22,6 +22,7 @@ func toPod(spec *Spec) *v1.Pod {
 			Labels:      spec.PodSpec.Labels,
 		},
 		Spec: v1.PodSpec{
+			Affinity:           toAffinity(),
 			ServiceAccountName: spec.PodSpec.ServiceAccountName,
 			RestartPolicy:      v1.RestartPolicyNever,
 			Volumes:            toVolumes(spec),
@@ -88,6 +89,27 @@ func toTolerations(spec *Spec) []v1.Toleration {
 		tolerations = append(tolerations, t)
 	}
 	return tolerations
+}
+
+func toAffinity() *v1.Affinity {
+	return &v1.Affinity{
+		PodAntiAffinity: &v1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []v1.WeightedPodAffinityTerm{
+				{
+					Weight: 100,
+					PodAffinityTerm: v1.PodAffinityTerm{
+						LabelSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{
+								"io.drone": "true",
+							},
+						},
+						TopologyKey: "kubernetes.io/hostname",
+					},
+				},
+			},
+		},
+	}
+
 }
 
 func toVolumes(spec *Spec) []v1.Volume {

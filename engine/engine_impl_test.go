@@ -9,8 +9,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestKubernetes_exec(t *testing.T) {
-	cfg, _ := clientcmd.BuildConfigFromFlags("", "/Users/dmc/.kube/ali.config")
+// ignore this
+func testKubernetes_exec(t *testing.T) {
+	cfg, _ := clientcmd.BuildConfigFromFlags("", "")
 	k := kubernetes.NewForConfigOrDie(cfg)
 
 	type fields struct {
