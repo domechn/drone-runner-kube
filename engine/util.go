@@ -20,7 +20,7 @@ func FilterEmoji(content string) string {
 
 // FilterInvalidChar ...
 func FilterInvalidChar(content string) string {
-	for _, v := range []string{`"`, `|`} {
+	for _, v := range []string{`"`, `|`, "`"} {
 		content = strings.ReplaceAll(content, v, " ")
 	}
 	return content
